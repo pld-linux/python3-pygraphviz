@@ -1,38 +1,37 @@
 #
 # Conditional build:
-%bcond_without	doc	# Sphinx documentation
-%bcond_with	tests	# unit tests (fail with current graphviz)
+%bcond_with	doc	# Sphinx documentation (fails: missing gallery file?)
+%bcond_without	tests	# unit tests
 
 %define 	module	pygraphviz
 Summary:	pygraphviz - Python interface to the Graphviz graph layout and visualization package
 Summary(pl.UTF-8):	pygraphviz - pythonowy interfejs do pakietu struktur i wizualizacji grafów Graphviz
-Name:		python-%{module}
-# keep 1.5 here for python2 support
-Version:	1.5
+Name:		python3-%{module}
+Version:	1.14
 Release:	1
 License:	BSD
 Group:		Libraries/Python
 #Source0Download: https://pypi.org/simple/pygraphviz/
-Source0:	https://files.pythonhosted.org/packages/source/p/pygraphviz/%{module}-%{version}.zip
-# Source0-md5:	c186f5f6567e523a862063fc62ddcd2f
+Source0:	https://files.pythonhosted.org/packages/source/p/pygraphviz/%{module}-%{version}.tar.gz
+# Source0-md5:	670ba4e63d7b28fb3b6748d4d4c54b15
 URL:		https://pygraphviz.github.io/
 BuildRequires:	graphviz-devel
 BuildRequires:	pkgconfig
-BuildRequires:	python-devel >= 1:2.7
-BuildRequires:	python-setuptools
+BuildRequires:	python3-devel >= 1:3.10
+BuildRequires:	python3-setuptools >= 1:61.2
 %if %{with tests}
-BuildRequires:	python-doctest-ignore-unicode >= 0.1.2
-BuildRequires:	python-mock >= 2.0.0
-BuildRequires:	python-nose >= 1.3.7
+BuildRequires:	python3-pytest
 %endif
 BuildRequires:	rpm-build >= 4.6
 BuildRequires:	rpm-pythonprov
 BuildRequires:	rpmbuild(macros) >= 1.714
 BuildRequires:	unzip
 %if %{with doc}
-BuildRequires:	sphinx-pdg-2
+BuildRequires:	python3-numpydoc
+BuildRequires:	python3-pydata_sphinx_theme
+BuildRequires:	sphinx-pdg-3
 %endif
-Requires:	python-modules >= 1:2.7
+Requires:	python3-modules >= 1:3.10
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
@@ -59,32 +58,28 @@ Dokumentacja API modułu Pythona pygraphviz.
 %setup -q -n %{module}-%{version}
 
 %build
-%py_build
+%py3_build
 
 %if %{with tests}
-PYTHONPATH=$(readlink -f build-2/lib.*) \
-nosetests-%{py_ver} build-2/lib.*/pygraphviz/tests
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+PYTHONPATH=$(readlink -f build-3/lib.*) \
+%{__python3} -m pytest build-3/lib.*/pygraphviz/tests
 %endif
 
 %if %{with doc}
-PYTHONPATH=$(readlink -f build-2/lib.*) \
+PYTHONPATH=$(readlink -f build-3/lib.*) \
 %{__make} -C doc html \
-	SPHINXBUILD=sphinx-build-2
+	SPHINXBUILD=sphinx-build-3
 %endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
-%py_install
+%py3_install
 
-%py_postclean
-
-%{__rm}  $RPM_BUILD_ROOT%{py_sitedir}/pygraphviz/graphviz.i
-%{__rm}  $RPM_BUILD_ROOT%{py_sitedir}/pygraphviz/graphviz_wrap.c
-%{__rm} -r $RPM_BUILD_ROOT%{py_sitedir}/pygraphviz/tests
-
-# packaged as %doc / in examplesdir
-%{__rm} -r $RPM_BUILD_ROOT%{_docdir}/pygraphviz-%{version}
+%{__rm} $RPM_BUILD_ROOT%{py3_sitedir}/pygraphviz/graphviz.i
+%{__rm} $RPM_BUILD_ROOT%{py3_sitedir}/pygraphviz/graphviz_wrap.c
+%{__rm} -r $RPM_BUILD_ROOT%{py3_sitedir}/pygraphviz/tests
 
 install -d $RPM_BUILD_ROOT%{_examplesdir}
 cp -pr examples $RPM_BUILD_ROOT%{_examplesdir}/%{name}-%{version}
@@ -95,10 +90,11 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(644,root,root,755)
 %doc LICENSE README.rst
-%dir %{py_sitedir}/pygraphviz
-%{py_sitedir}/pygraphviz/_graphviz.so
-%{py_sitedir}/pygraphviz/*.py[co]
-%{py_sitedir}/pygraphviz-%{version}-py*.egg-info
+%dir %{py3_sitedir}/pygraphviz
+%{py3_sitedir}/pygraphviz/_graphviz.cpython-*.so
+%{py3_sitedir}/pygraphviz/*.py
+%{py3_sitedir}/pygraphviz/__pycache__
+%{py3_sitedir}/pygraphviz-%{version}-py*.egg-info
 %{_examplesdir}/%{name}-%{version}
 
 %if %{with doc}
